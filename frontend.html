@@ -1,10 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veri Görselleştirme</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+<style>
+    #graphs {
+        position: absolute;
+        left: 0;
+        width: 75%;
+        height: 75%
+    }
+
+    .inputs {
+            width: 10%;
+            height: 25px;
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+            margin-bottom: 10px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .input:focus {
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            outline: none;
+        }
+</style>
 <body>
-$END$
+    <h1>Historical and Predicted Prices</h1>
+
+    <form id="parameterForm">
+        <label for="futureTimeSteps">Future Time Steps:</label>
+        <input class="inputs" type="number" id="futureTimeSteps" value="30">
+
+        <label for="timeSteps">Time Steps:</label>
+        <input class="inputs" type="number" id="timeSteps" value="20">
+
+        <label for="startDate">Start Date:</label>
+        <input class="inputs" type="date" id="startDate" value="2022-01-01">
+
+        <label for="endDate">End Date:</label>
+        <input class="inputs" type="date" id="endDate" value="2022-12-31">
+
+        <label for="tickers">Tickers:</label>
+        <input class="inputs" type="text" id="tickers" value="AAPL">
+
+        <button class="inputs" type="button" onclick="fetchAndVisualizeData()">Predict</button>
+    </form>
+
+    <div id="graphs">
+        <canvas id="myChart"></canvas>
+        <canvas id="predictedPrices"></canvas>
+    </div>
+
+
+    <script>
+        function fetchAndVisualizeData() {
+            const futureTimeSteps = document.getElementById('futureTimeSteps').value;
+            const timeSteps = document.getElementById('timeSteps').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const tickers = document.getElementById('tickers').value;
+            var historical_prices_list = [];
+            var predicted_prices_list = []
+
+            // Backend'den veri çekme
+            fetch('http://127.0.0.1:5000/api/get_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    futureTimeSteps,
+                    timeSteps,
+                    startDate,
+                    endDate,
+                    tickers,
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Veriyi kullanarak görselleştirmeyi yap
+                    for(i=0; i<data.predictions.historical_prices.length;i++){
+                        historical_prices_list.push((data.predictions.historical_prices[i])[0])
+                    }
+                    for(i=0; i<data.predictions.predicted_prices.length;i++){
+                        predicted_prices_list.push((data.predictions.predicted_prices[i])[0])
+                    }
+                    drawChart("myChart",historical_prices_list, "Historical Prices");
+                    drawChart("predictedPrices", predicted_prices_list, "Predicted Prices");
+                })
+                .catch(error => console.error('Veri çekme hatası:', error));
+        }
+
+        function drawChart(chart,chartData, labelName) {
+    const ctx = document.getElementById(chart).getContext('2d');
+
+    // Grafiği oluştur
+    const myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({ length: chartData.length }, (_, i) => i + 1),
+            datasets: [
+                {
+                    label: labelName,
+                    data: chartData,
+                    borderColor: labelName == "Historical Prices" ? "blue" : "red",
+                    fill: false,
+                },
+            ],
+        },
+    });
+}
+    </script>
 </body>
 </html>
